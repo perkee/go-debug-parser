@@ -19,10 +19,15 @@ type Msg
 main : Program () Model Msg
 main =
     Browser.sandbox
-        { init = "<1,2,3,4,>"
+        { init = "< 1 , 2 ,3,4 >"
         , update = update
         , view = view >> H.toUnstyled
         }
+
+
+type HappyResult
+    = HappyFlatVector Vector
+    | HappyRecursivePoint Inner
 
 
 view : Model -> H.Html Msg
@@ -33,7 +38,7 @@ view model =
             , HE.onInput RawInputChanged
             ]
             []
-        , H.text <| Debug.toString <| P.run vector model
+        , H.text <| Debug.toString <| P.run happyParser model
         ]
 
 
@@ -42,6 +47,16 @@ update msg _ =
     case msg of
         RawInputChanged s ->
             s
+
+
+happyParser : Parser HappyResult
+happyParser =
+    P.oneOf
+        [ P.succeed HappyFlatVector
+            |= vector
+        , P.succeed HappyRecursivePoint
+            |= point
+        ]
 
 
 
