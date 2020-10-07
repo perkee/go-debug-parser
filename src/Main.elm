@@ -26,8 +26,8 @@ main =
 
 
 type HappyResult
-    = HappyFlatVector Vector
-    | HappyRecursivePoint Inner
+    = HappyFlatVector FloatVector
+    | HappyRecursivePoint PointNode
 
 
 view : Model -> H.Html Msg
@@ -53,7 +53,7 @@ happyParser : Parser HappyResult
 happyParser =
     P.oneOf
         [ P.succeed HappyFlatVector
-            |= vector
+            |= floatVector
         , P.succeed HappyRecursivePoint
             |= point
         ]
@@ -79,7 +79,7 @@ type alias NearlyDict =
 
 
 type Node
-    = Leaf String
+    = MapLeaf String
     | MapBranch NearlyDict
     | ArrayBranch (List Node)
 
@@ -90,44 +90,48 @@ type Node
 -- (   1,    (   1,    3  )     )
 
 
-type alias Point =
-    { x : Inner
-    , y : Inner
+type alias PointBranch =
+    { x : PointNode
+    , y : PointNode
     }
 
 
-type Inner
-    = Pointy Point
-    | Floaty Float
+type PointNode
+    = Branch PointBranch
+    | Leaf Float
 
 
-pointyHelper : Inner -> Inner -> Inner
-pointyHelper x y =
-    Pointy <| Point x y
+branch : PointNode -> PointNode -> PointNode
+branch x y =
+    Branch <| PointBranch x y
 
 
-point : Parser Inner
+point : Parser PointNode
 point =
-    P.succeed pointyHelper
+    P.succeed branch
         |. P.symbol "("
-        |. P.spaces
-        |= childParser
-        |. P.spaces
+        |= insidePoint
         |. P.symbol ","
-        |. P.spaces
-        |= childParser
-        |. P.spaces
+        |= insidePoint
         |. P.symbol ")"
 
 
-childParser : Parser Inner
-childParser =
-    P.oneOf
-        [ P.succeed Floaty
-            |= P.float
-        , P.succeed identity
-            |= P.lazy (\_ -> point)
-        ]
+thunkPoint : () -> Parser PointNode
+thunkPoint () =
+    point
+
+
+insidePoint : Parser PointNode
+insidePoint =
+    P.succeed identity
+        |. P.spaces
+        |= P.oneOf
+            [ P.succeed Leaf
+                |= P.float
+            , P.succeed identity
+                |= P.lazy thunkPoint
+            ]
+        |. P.spaces
 
 
 
@@ -135,40 +139,44 @@ childParser =
    let's see if we can make it loop so it works on an array
    Well first we'll do just a 1D Vector
 -}
--- FlatVector
+-- FloatVector
 
 
-type alias Vector =
+type alias FloatVector =
     List Float
 
 
-vector : Parser Vector
-vector =
+floatVector : Parser FloatVector
+floatVector =
     P.succeed identity
         |. P.token "<"
         |. P.spaces
-        |= P.loop [] vectorEnd
+        |= P.loop [] floatVectorEnd
 
 
-vectorEnd : Vector -> Parser (P.Step Vector Vector)
-vectorEnd rev =
+floatVectorEnd : FloatVector -> Parser (P.Step FloatVector FloatVector)
+floatVectorEnd rev =
     P.oneOf
         [ P.succeed (appendAndLoop rev)
             |. P.spaces
             |. P.symbol ","
-            |. P.spaces
-            |= P.float
-            |. P.spaces
+            |= parseSpacyFloat
         , P.succeed (appendAndLoop rev)
-            |. P.spaces
-            |= P.float
-            |. P.spaces
+            |= parseSpacyFloat
         , P.succeed (P.Done (List.reverse rev))
             |. P.spaces
             |. P.token ">"
         ]
 
 
-appendAndLoop : Vector -> Float -> P.Step Vector a
+parseSpacyFloat : Parser Float
+parseSpacyFloat =
+    P.succeed identity
+        |. P.spaces
+        |= P.float
+        |. P.spaces
+
+
+appendAndLoop : FloatVector -> Float -> P.Step FloatVector a
 appendAndLoop vec float =
     P.Loop (float :: vec)
