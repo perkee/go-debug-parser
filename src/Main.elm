@@ -1,13 +1,14 @@
 module Main exposing (main)
 
-import BinaryTree exposing (BinaryTree)
+import BinaryTree
 import Browser
+import DeepVector
 import Dict exposing (Dict)
-import FloatVector exposing (FloatVector)
+import FloatVector
 import Html.Styled as H
 import Html.Styled.Attributes as HA
 import Html.Styled.Events as HE
-import Parser as P exposing ((|.), (|=), Parser)
+import Parser as P exposing ((|=), Parser)
 
 
 type alias Model =
@@ -21,15 +22,16 @@ type Msg
 main : Program () Model Msg
 main =
     Browser.sandbox
-        { init = "< 1 , 2 ,3,4 >"
+        { init = "[ 1 , 2 ,3,4 ]"
         , update = update
         , view = view >> H.toUnstyled
         }
 
 
-type HappyResult
-    = HappyFloatVector FloatVector
-    | HappyRecursivePoint BinaryTree
+type ParseResult
+    = FloatVector FloatVector.FloatVector
+    | BinaryTree BinaryTree.BinaryTree
+    | DeepVector DeepVector.DeepVector
 
 
 view : Model -> H.Html Msg
@@ -40,7 +42,9 @@ view model =
             , HE.onInput RawInputChanged
             ]
             []
-        , H.text <| Debug.toString <| P.run happyParser model
+        , H.pre []
+            [ H.text <| Debug.toString <| P.run happyParser model
+            ]
         ]
 
 
@@ -51,13 +55,15 @@ update msg _ =
             s
 
 
-happyParser : Parser HappyResult
+happyParser : Parser ParseResult
 happyParser =
     P.oneOf
-        [ P.succeed HappyFloatVector
+        [ P.succeed FloatVector
             |= FloatVector.parse
-        , P.succeed HappyRecursivePoint
+        , P.succeed BinaryTree
             |= BinaryTree.parse
+        , P.succeed DeepVector
+            |= DeepVector.parse
         ]
 
 
