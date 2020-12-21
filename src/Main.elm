@@ -8,6 +8,7 @@ import FloatVector
 import Html.Styled as H
 import Html.Styled.Attributes as HA
 import Html.Styled.Events as HE
+import Map
 import Parser as P exposing ((|=), Parser)
 
 
@@ -22,7 +23,7 @@ type Msg
 main : Program () Model Msg
 main =
     Browser.sandbox
-        { init = "[ 1 , 2 ,3,4 ]"
+        { init = "map[key:val key2:map[key2.1:val 2.1 i think key2.2:val 2.2] key3:val3 ]"
         , update = update
         , view = view >> H.toUnstyled
         }
@@ -32,6 +33,7 @@ type ParseResult
     = FloatVector FloatVector.FloatVector
     | BinaryTree BinaryTree.BinaryTree
     | DeepVector DeepVector.DeepVector
+    | Map (List Map.MapMember)
 
 
 view : Model -> H.Html Msg
@@ -43,9 +45,36 @@ view model =
             ]
             []
         , H.pre []
-            [ H.text <| Debug.toString <| P.run happyParser model
+            [ H.text <| renderParser <| model
             ]
         ]
+
+
+renderParser : String -> String
+renderParser model =
+    case P.run happyParser model of
+        Result.Ok val ->
+            Debug.toString val
+
+        Result.Err vals ->
+            model
+                ++ "\n"
+                ++ (List.map renderVal vals
+                        |> String.join "\n"
+                   )
+
+
+renderVal : P.DeadEnd -> String
+renderVal { col, problem, row } =
+    (List.repeat (col - 1) ' ' |> String.fromList)
+        ++ "^"
+        ++ (case problem of
+                P.Expecting s ->
+                    "expecting " ++ s
+
+                _ ->
+                    Debug.toString problem
+           )
 
 
 update : Msg -> Model -> Model
@@ -64,6 +93,8 @@ happyParser =
             |= BinaryTree.parse
         , P.succeed DeepVector
             |= DeepVector.parse
+        , P.succeed Map
+            |= Map.parse
         ]
 
 

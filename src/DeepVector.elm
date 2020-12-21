@@ -29,8 +29,8 @@ nodeParser =
             ]
 
 
-parse : Parser DeepVector
-parse =
+pZarse : Parser DeepVector
+pZarse =
     P.succeed identity
         |. P.token "["
         |. P.spaces
@@ -67,8 +67,8 @@ appendAndLoop vec float =
 -- Equivalent using the amazing helper fn.
 
 
-pZarse : Parser DeepVector
-pZarse =
+parse : Parser DeepVector
+parse =
     P.sequence
         { start = "["
         , separator = ","

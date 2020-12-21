@@ -1,4 +1,4 @@
-module BinaryTree exposing (BinaryTree(..), parse)
+module BinaryTree exposing (BinaryTree(..), PointBranch, parse)
 
 import Parser as P exposing ((|.), (|=), Parser)
 
